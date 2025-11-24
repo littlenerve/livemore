@@ -106,6 +106,7 @@ class BacktestEngine:
             actual_volume = min(volume, max_affordable // 100 * 100)  # 确保是100的倍数
             
             if actual_volume <= 0:
+                print(f"[DEBUG] {signal.date} - {symbol}: 资金不足，无法买入")
                 return False  # 资金不足
             
             cost = actual_volume * price
@@ -113,6 +114,7 @@ class BacktestEngine:
             total_cost = cost + commission
             
             if total_cost > self.current_capital:
+                print(f"[DEBUG] {signal.date} - {symbol}: 资金不足，所需成本 ¥{total_cost:,.2f}，当前资金 ¥{self.current_capital:,.2f}")
                 return False  # 资金不足
             
             # 执行买入
@@ -127,6 +129,8 @@ class BacktestEngine:
                     avg_price=new_avg_price,
                     entry_date=old_position.entry_date  # 保持原有入场日期
                 )
+                print(f"[BUY] {signal.date} - {symbol}: 加仓 {actual_volume} 股，价格 ¥{price:.2f}，理由: {signal.reason}")
+                print(f"      持仓变化: {old_position.quantity} → {new_quantity} 股，平均成本 ¥{new_avg_price:.2f}")
             else:
                 # 新建仓位
                 self.positions[symbol] = Position(
@@ -135,11 +139,15 @@ class BacktestEngine:
                     avg_price=price,
                     entry_date=signal.date
                 )
+                print(f"[BUY] {signal.date} - {symbol}: 新建仓位 {actual_volume} 股，价格 ¥{price:.2f}，理由: {signal.reason}")
             
             self.current_capital -= total_cost
+            print(f"      成本: ¥{cost:.2f}, 佣金: ¥{commission:.2f}, 总支出: ¥{total_cost:.2f}")
+            print(f"      交易后资金: ¥{self.current_capital:.2f}")
             
         elif action == 'SELL':
             if symbol not in self.positions or self.positions[symbol].quantity == 0:
+                print(f"[DEBUG] {signal.date} - {symbol}: 无持仓可卖")
                 return False  # 无持仓可卖
             
             # 确保卖出股数不超过持仓
@@ -152,21 +160,31 @@ class BacktestEngine:
             # 执行卖出
             remaining_quantity = self.positions[symbol].quantity - actual_volume
             if remaining_quantity == 0:
+                old_position = self.positions[symbol]
+                profit = (price - old_position.avg_price) * actual_volume
+                print(f"[SELL] {signal.date} - {symbol}: 清仓 {actual_volume} 股，价格 ¥{price:.2f}，理由: {signal.reason}")
+                print(f"      入场价: ¥{old_position.avg_price:.2f}, 盈亏: ¥{profit:.2f} ({profit/actual_volume:.2f}/股)")
                 del self.positions[symbol]
             else:
                 # 减少仓位
                 old_position = self.positions[symbol]
+                profit = (price - old_position.avg_price) * actual_volume
                 self.positions[symbol] = Position(
                     symbol=symbol,
                     quantity=remaining_quantity,
                     avg_price=old_position.avg_price,
                     entry_date=old_position.entry_date
                 )
+                print(f"[SELL] {signal.date} - {symbol}: 减仓 {actual_volume} 股，价格 ¥{price:.2f}，理由: {signal.reason}")
+                print(f"      入场价: ¥{old_position.avg_price:.2f}, 盈亏: ¥{profit:.2f} ({profit/actual_volume:.2f}/股)")
+                print(f"      持仓变化: {old_position.quantity} → {remaining_quantity} 股")
             
             self.current_capital += total_revenue
+            print(f"      收入: ¥{revenue:.2f}, 佣金: ¥{commission:.2f}, 印花税: ¥{tax:.2f}，总收入: ¥{total_revenue:.2f}")
+            print(f"      交易后资金: ¥{self.current_capital:.2f}")
         
         # 记录交易日志
-        self.trade_log.append({
+        trade_record = {
             'date': signal.date,
             'symbol': symbol,
             'action': action,
@@ -176,7 +194,14 @@ class BacktestEngine:
             'reason': signal.reason,
             'capital_after': self.current_capital,
             'equity': self.calculate_equity(market_data, signal.date)
-        })
+        }
+        self.trade_log.append(trade_record)
+        
+        # 打印交易后的持仓和资金情况
+        current_equity = self.calculate_equity(market_data, signal.date)
+        print(f"      当前权益: ¥{current_equity:.2f}")
+        print(f"      持仓股票: {list(self.positions.keys()) if self.positions else '无'}")
+        print("-" * 80)
         
         return True
     
@@ -211,6 +236,17 @@ class BacktestEngine:
         for current_date in all_dates:
             current_date_str = current_date.strftime('%Y-%m-%d')
             
+            # 打印每日开始信息
+            current_equity = self.calculate_equity(market_data, current_date_str)
+            print(f"\n{'='*50}")
+            print(f"日期: {current_date_str}")
+            print(f"当前权益: ¥{current_equity:,.2f}")
+            print(f"现金余额: ¥{self.current_capital:,.2f}")
+            print(f"持仓股票: {list(self.positions.keys()) if self.positions else '无'}")
+            print(f"{'='*50}")
+            
+            daily_trades = 0  # 记录当日交易数
+            
             # 为每只股票生成信号
             for symbol in symbols:
                 if symbol not in market_data:
@@ -240,7 +276,26 @@ class BacktestEngine:
                         )
                         signal.volume = min(signal.volume, adjusted_volume)
                         
-                        self.execute_trade(signal, market_data)
+                        success = self.execute_trade(signal, market_data)
+                        if success:
+                            daily_trades += 1
+            
+            # 如果当日没有交易，也打印持仓情况
+            if daily_trades == 0:
+                print(f"当日无交易")
+                if self.positions:
+                    print(f"当前持仓:")
+                    for symbol, position in self.positions.items():
+                        # 获取当前价格
+                        current_stock_data = market_data[symbol][
+                            market_data[symbol]['date'] == current_date
+                        ]
+                        if not current_stock_data.empty:
+                            current_price = current_stock_data.iloc[0]['close']
+                            unrealized_pnl = (current_price - position.avg_price) * position.quantity
+                            print(f"  {symbol}: {position.quantity} 股, 成本 ¥{position.avg_price:.2f}, "
+                                  f"当前价 ¥{current_price:.2f}, 浮盈 ¥{unrealized_pnl:.2f}")
+                print("-" * 80)
             
             # 记录权益曲线
             current_equity = self.calculate_equity(market_data, current_date_str)
