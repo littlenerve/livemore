@@ -1,0 +1,49 @@
+# 量化交易系统配置文件
+# 系统会根据此配置自动决定运行模式
+
+# 运行模式: backtest(回测), simulate(模拟), live(实盘)
+mode: backtest
+
+# 股票配置
+symbols:
+  # 如果为空，则获取所有沪深主板非ST股票
+  # 如果指定具体股票，则只交易这些股票
+  - '000001.SZ'  # 平安银行
+  - '600000.SH'  # 浦发银行
+  # - '000858.SZ'  # 五粮液
+  # - '600036.SH'  # 招商银行
+
+# 如果symbols为空，则获取所有沪深主板非ST股票
+# all_stocks: true  # 未注释表示使用所有股票
+
+# 回测配置
+backtest:
+  start_date: '2024-01-01'
+  end_date: '2024-11-24'
+  initial_capital: 100000
+
+# 模拟交易配置
+simulate:
+  initial_capital: 100000
+  start_date: '2024-01-01'
+  end_date: '2024-11-24'
+
+# 实盘交易配置
+live:
+  enable_real_trading: false  # 出于安全考虑，默认关闭实盘交易
+  initial_capital: 100000
+
+# 策略参数
+strategy:
+  # 趋势确认周期
+  trend_confirmation_period: 20
+  # 突破阈值
+  breakout_threshold: 0.01
+  # 市场时机阈值
+  market_timing_threshold: 0.005
+  # 是否需要成交量确认
+  volume_confirmation: false
+  # 枢轴点计算周期
+  pivot_point_period: 30
+  # 市场情绪敏感度
+  market_mood_sensitivity: 0.6
