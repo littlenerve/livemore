@@ -56,7 +56,7 @@ class BacktestEngine:
         self.trade_log: List[Dict] = []
         self.equity_curve: List[Tuple[str, float]] = []  # (date, equity)
         self.strategy = LivermoreStrategy()
-        self.data_handler = DataHandler()
+        self.data_handler = DataHandler(cache_dir='cache/backtest_cache')
         
     def reset(self):
         """重置回测状态"""
@@ -236,15 +236,6 @@ class BacktestEngine:
         for current_date in all_dates:
             current_date_str = current_date.strftime('%Y-%m-%d')
             
-            # 打印每日开始信息
-            current_equity = self.calculate_equity(market_data, current_date_str)
-            print(f"\n{'='*50}")
-            print(f"日期: {current_date_str}")
-            print(f"当前权益: ¥{current_equity:,.2f}")
-            print(f"现金余额: ¥{self.current_capital:,.2f}")
-            print(f"持仓股票: {list(self.positions.keys()) if self.positions else '无'}")
-            print(f"{'='*50}")
-            
             daily_trades = 0  # 记录当日交易数
             
             # 为每只股票生成信号
@@ -280,22 +271,10 @@ class BacktestEngine:
                         if success:
                             daily_trades += 1
             
-            # 如果当日没有交易，也打印持仓情况
-            if daily_trades == 0:
-                print(f"当日无交易")
-                if self.positions:
-                    print(f"当前持仓:")
-                    for symbol, position in self.positions.items():
-                        # 获取当前价格
-                        current_stock_data = market_data[symbol][
-                            market_data[symbol]['date'] == current_date
-                        ]
-                        if not current_stock_data.empty:
-                            current_price = current_stock_data.iloc[0]['close']
-                            unrealized_pnl = (current_price - position.avg_price) * position.quantity
-                            print(f"  {symbol}: {position.quantity} 股, 成本 ¥{position.avg_price:.2f}, "
-                                  f"当前价 ¥{current_price:.2f}, 浮盈 ¥{unrealized_pnl:.2f}")
-                print("-" * 80)
+            # 只在有交易发生时打印当日汇总
+            if daily_trades > 0:
+                current_equity = self.calculate_equity(market_data, current_date_str)
+                print(f"\n{current_date_str} 交易日汇总: 完成 {daily_trades} 笔交易, 当前权益: ¥{current_equity:,.2f}")
             
             # 记录权益曲线
             current_equity = self.calculate_equity(market_data, current_date_str)

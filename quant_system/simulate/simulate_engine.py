@@ -147,8 +147,12 @@ class SimulationEngine:
         print("开始模拟交易...")
         self.is_running = True
         
+        # 使用data_handler获取交易日历，将非交易日调整为最近的交易日
+        adjusted_start_date = data_handler.get_previous_trading_date(start_date)
+        adjusted_end_date = data_handler.get_previous_trading_date(end_date)
+        
         # 获取历史数据以计算技术指标
-        all_market_data = data_handler.get_market_data(symbols, start_date, end_date)
+        all_market_data = data_handler.get_market_data(symbols, adjusted_start_date, adjusted_end_date)
         
         # 模拟实时数据流
         # 这里简化处理，按日循环
