@@ -35,7 +35,7 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, initial_cap
     print("开始回测...")
     
     # 初始化组件
-    data_handler = DataHandler()
+    data_handler = DataHandler(cache_dir='cache/main_cache')
     backtest_engine = BacktestEngine(initial_capital=initial_capital)
     
     # 获取数据
@@ -66,7 +66,7 @@ def run_simulation(symbols: List[str], start_date: str, end_date: str, initial_c
     print("开始模拟交易...")
     
     # 初始化组件
-    data_handler = DataHandler()
+    data_handler = DataHandler(cache_dir='cache/main_cache')
     simulation_engine = SimulationEngine(initial_capital=initial_capital)
     
     # 运行模拟
@@ -92,7 +92,7 @@ def run_live_trading(symbols: List[str]):
         return
     
     # 初始化组件
-    data_handler = DataHandler()
+    data_handler = DataHandler(cache_dir='cache/main_cache')
     live_trading_engine = LiveTradingEngine()
     
     # 运行实盘交易
@@ -116,7 +116,7 @@ def main():
         # 如果symbols为空，则获取所有沪深主板非ST股票
         if not symbols:
             print("正在获取所有沪深主板非ST股票...")
-            data_handler = DataHandler()
+            data_handler = DataHandler(cache_dir='cache/main_cache')
             all_stocks = data_handler.get_stock_list()
             symbols = all_stocks['ts_code'].tolist()
             print(f"获取到 {len(symbols)} 只股票")
