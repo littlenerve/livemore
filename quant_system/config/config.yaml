@@ -8,8 +8,8 @@ mode: backtest
 symbols:
   # 如果为空，则获取所有沪深主板非ST股票
   # 如果指定具体股票，则只交易这些股票
-  - '000001.SZ'  # 平安银行
-  - '600000.SH'  # 浦发银行
+  - '001309.SZ'  # 平安银行
+#  - '600000.SH'  # 浦发银行
   # - '000858.SZ'  # 五粮液
   # - '600036.SH'  # 招商银行
 
@@ -42,7 +42,7 @@ strategy:
   # 市场时机阈值
   market_timing_threshold: 0.005
   # 是否需要成交量确认
-  volume_confirmation: false
+  volume_confirmation: true
   # 枢轴点计算周期
   pivot_point_period: 30
   # 市场情绪敏感度

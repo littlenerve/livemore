@@ -47,7 +47,7 @@ pip install pandas numpy matplotlib seaborn akshare tushare requests
 ### 1. 回测模式
 
 ```bash
-python -m quant_system.main backtest --symbols 000001.SZ 600000.SH --start_date 2023-01-01 --end_date 2023-12-31 --capital 100000
+python -m quant_system.main backtest --symbols 001309.SZ  --start_date 2023-01-01 --end_date 2025-11-24 --capital 100000
 ```
 
 ### 2. 模拟交易
